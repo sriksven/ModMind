@@ -170,7 +170,7 @@ export function buildLeaderboard(modActionsByMod: Record<string, { accepted: num
   const topAccepter = entries.reduce((max, curr) => (curr.acceptanceRate > max.acceptanceRate ? curr : max), entries[0]);
 
   const lines = entries.map((entry, idx) => {
-    return `${idx + 1}. u/${entry.username} — ${entry.total} decisions (${entry.accepted} accepted, ${entry.overridden} overridden)`;
+    return `${idx + 1}. u/${entry.username} - ${entry.total} decisions (${entry.accepted} accepted, ${entry.overridden} overridden)`;
   });
 
   return [

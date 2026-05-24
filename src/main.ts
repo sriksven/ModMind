@@ -376,13 +376,7 @@ async function applyRuntimeAction(context: any, content: ContentItem, pipelineRe
   }
 
   const cardText = renderSuggestionCard(pipelineResult.result);
-  const body = [
-    "ModMind moderation suggestion",
-    "",
-    cardText,
-    "",
-    "A human moderator should confirm this action before relying on it outside playtest."
-  ].join("\n");
+  const body = cardText;
 
   const store = getRuntimeStore(context);
   const subredditName = content.subredditName;

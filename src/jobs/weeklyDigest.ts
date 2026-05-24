@@ -30,7 +30,7 @@ function detectPoorlyCalibratedRules(
         overrideRate: Math.round(overrideRate * 100),
         totalDecisions: total,
         suggestion: overrideRate > 0.7
-          ? `Consider clarifying the wording of "${ruleName}" — the AI misidentified violations ${Math.round(overrideRate * 100)}% of the time.`
+          ? `Consider clarifying the wording of "${ruleName}" - the AI misidentified violations ${Math.round(overrideRate * 100)}% of the time.`
           : `"${ruleName}" has a ${Math.round(overrideRate * 100)}% override rate. You may want to lower the flag sensitivity for this rule.`,
         detectedAt: Date.now(),
         dismissed: false

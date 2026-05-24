@@ -157,12 +157,12 @@ export async function evaluateContent(options: EvaluateContentOptions): Promise<
     // Suppress flag if all rules hallucinated and low confidence
     if (valid.length === 0 && hallucinated.length > 0 && normalized.confidence < 90) {
       normalized.shouldFlag = false;
-      normalized.reason += " (No valid rule violation confirmed — flagging suppressed.)";
+      normalized.reason += " (No valid rule violation confirmed - flagging suppressed.)";
     }
 
     // Faithfulness scoring
     const faithfulnessScore = scoreFaithfulness(normalized.reason, options.content);
-    if (faithfulnessScore < 15) {
+    if (faithfulnessScore < 15 && normalized.confidence < 90) {
       console.warn("ModMind low faithfulness detected", {
         contentId: options.content.id,
         reason: normalized.reason,
@@ -171,7 +171,7 @@ export async function evaluateContent(options: EvaluateContentOptions): Promise<
       if (options.store && options.subredditName) {
         await incrementMetric(options.store, options.subredditName, currentWeek, "lowFaithfulnessCount", 1);
       }
-      normalized.reason += ` [Note: AI explanation had low grounding score (${faithfulnessScore}%) — review carefully.]`;
+      normalized.reason += ` [Note: AI explanation had low grounding score (${faithfulnessScore}%) - review carefully.]`;
     }
 
     // Toxicity rewrite
