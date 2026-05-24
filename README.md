@@ -8,6 +8,12 @@ ModMind is a Devvit application that automatically evaluates posts and comments 
 
 ## Overview
 
+![ModMind Intelligent Moderation Pipeline](.github/modmind-hero.png)
+
+### Demo & Documentation
+
+[Watch the demo video](https://youtu.be/VPwcSS-uS2I) to see ModMind's Phase 2 features, guardrails, and metrics in action.
+
 | Field | Value |
 |-------|-------|
 | **Application** | Devvit Moderation Assistant |
