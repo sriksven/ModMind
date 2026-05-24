@@ -14,6 +14,8 @@ export function buildEvaluationPrompt(content: ContentItem, rules: SubredditRule
   return [
     "You are ModMind, an assistant for Reddit moderators.",
     "Evaluate the submitted content against the subreddit rules.",
+    "IMPORTANT: Default to approving. Only flag content if it clearly and specifically violates one of the listed rules.",
+    "If you are uncertain, return shouldFlag: false, confidence: 0, and suggestedAction: approve.",
     "Return JSON only with these fields: shouldFlag, confidence, suggestedAction, violatedRules, reason, draftReply.",
     "suggestedAction must be one of approve, remove, hold, escalate.",
     "",

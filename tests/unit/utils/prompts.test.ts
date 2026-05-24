@@ -12,6 +12,8 @@ describe("prompts", () => {
   it("includes rules, content, JSON-only instruction, and optional history", () => {
     const prompt = buildEvaluationPrompt(spamPost, sampleRules, { username: "u", flagCount: 5, actions: [] });
     expect(prompt).toContain("Return JSON only");
+    expect(prompt).toContain("Default to approving");
+    expect(prompt).toContain("If you are uncertain");
     expect(prompt).toContain("No spam");
     expect(prompt).toContain(spamPost.title);
     expect(prompt).toContain("prior flags: 5");

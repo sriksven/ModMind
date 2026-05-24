@@ -49,7 +49,7 @@ export async function evaluateContent(options: EvaluateContentOptions): Promise<
 
     return {
       ...boosted,
-      shouldFlag: boosted.shouldFlag || boosted.confidence >= threshold || boosted.suggestedAction === "hold"
+      shouldFlag: boosted.shouldFlag || boosted.confidence >= threshold
     };
   } catch {
     return safeEvaluation("approve", false, 0, FALLBACK_FLAG_REASON, language);

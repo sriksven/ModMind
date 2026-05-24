@@ -49,6 +49,27 @@ describe("evaluator", () => {
     expect(result.shouldFlag).toBe(true);
   });
 
+  it("does not flag low-confidence hold suggestions below threshold", async () => {
+    const result = await evaluateContent({
+      content: cleanPost,
+      rules: sampleRules,
+      flagThreshold: 85,
+      aiClient: new StaticAIClient(
+        JSON.stringify({
+          shouldFlag: false,
+          confidence: 40,
+          suggestedAction: "hold",
+          violatedRules: [],
+          reason: "Uncertain.",
+          draftReply: ""
+        })
+      )
+    });
+
+    expect(result.shouldFlag).toBe(false);
+    expect(result.suggestedAction).toBe("hold");
+  });
+
   it("uses multilingual output for supported non-English posts", async () => {
     const result = await evaluateContent({
       content: spanishPost,
