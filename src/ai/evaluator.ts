@@ -46,10 +46,11 @@ export async function evaluateContent(options: EvaluateContentOptions): Promise<
     const repeatBoost = Math.min(12, Math.floor((options.userHistory?.flagCount ?? 0) / 5) * 6);
     const boosted = normalizeEvaluation({ ...normalized, confidence: normalized.confidence + repeatBoost });
     const threshold = options.flagThreshold ?? 75;
+    const recommendsAction = boosted.suggestedAction !== "approve";
 
     return {
       ...boosted,
-      shouldFlag: boosted.shouldFlag || boosted.confidence >= threshold
+      shouldFlag: recommendsAction && (boosted.shouldFlag || boosted.confidence >= threshold)
     };
   } catch {
     return safeEvaluation("approve", false, 0, FALLBACK_FLAG_REASON, language);

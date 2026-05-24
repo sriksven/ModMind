@@ -70,6 +70,26 @@ describe("evaluator", () => {
     expect(result.suggestedAction).toBe("hold");
   });
 
+  it("does not flag high-confidence approve decisions", async () => {
+    const result = await evaluateContent({
+      content: cleanPost,
+      rules: sampleRules,
+      aiClient: new StaticAIClient(
+        JSON.stringify({
+          shouldFlag: false,
+          confidence: 100,
+          suggestedAction: "approve",
+          violatedRules: [],
+          reason: "Clean.",
+          draftReply: ""
+        })
+      )
+    });
+
+    expect(result.shouldFlag).toBe(false);
+    expect(result.confidence).toBe(100);
+  });
+
   it("uses multilingual output for supported non-English posts", async () => {
     const result = await evaluateContent({
       content: spanishPost,

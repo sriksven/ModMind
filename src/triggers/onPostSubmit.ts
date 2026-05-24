@@ -39,7 +39,6 @@ export async function handlePostSubmit(options: PostPipelineOptions): Promise<Pi
     options.aiClient
   );
   const userHistory = await getUserHistory(options.store, options.content.authorName);
-  console.log("ModMind rules passed to evaluator", JSON.stringify(options.rules));
   const result = await evaluateContent({
     content: options.content,
     rules: options.rules,
@@ -68,6 +67,11 @@ export async function handlePostSubmit(options: PostPipelineOptions): Promise<Pi
     evaluated: true,
     duplicate: false,
     result,
-    action: result.suggestedAction === "hold" || result.confidence >= settings.autoHoldThreshold ? "hold" : result.shouldFlag ? "flag" : "none"
+    action:
+      result.shouldFlag && (result.suggestedAction === "hold" || result.confidence >= settings.autoHoldThreshold)
+        ? "hold"
+        : result.shouldFlag
+          ? "flag"
+          : "none"
   };
 }

@@ -3,7 +3,7 @@ import { StaticAIClient } from "../../src/ai/client.js";
 import { getWeeklyStats } from "../../src/storage/evaluationLog.js";
 import { MemoryStore } from "../../src/storage/redisAdapter.js";
 import { handlePostSubmit } from "../../src/triggers/onPostSubmit.js";
-import { spanishPost, spamPost } from "../fixtures/samplePosts.js";
+import { cleanPost, spanishPost, spamPost } from "../fixtures/samplePosts.js";
 import { sampleRules } from "../fixtures/sampleRules.js";
 
 describe("post pipeline", () => {
@@ -34,6 +34,20 @@ describe("post pipeline", () => {
     const duplicate = await handlePostSubmit({ store, content: spamPost, rules: sampleRules, aiClient });
     expect(duplicate.duplicate).toBe(true);
     expect((await getWeeklyStats(store, "modmind")).evaluated).toBe(1);
+  });
+
+  it("does not hold high-confidence approve decisions", async () => {
+    const result = await handlePostSubmit({
+      store,
+      content: cleanPost,
+      rules: sampleRules,
+      aiClient: new StaticAIClient(
+        JSON.stringify({ shouldFlag: false, confidence: 100, suggestedAction: "approve", violatedRules: [], reason: "Clean", draftReply: "" })
+      )
+    });
+
+    expect(result.result?.shouldFlag).toBe(false);
+    expect(result.action).toBe("none");
   });
 
   it("detects Spanish and uses multilingual result", async () => {
