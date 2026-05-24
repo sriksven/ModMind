@@ -7,6 +7,7 @@ export async function handleCommentSubmit(options: PostPipelineOptions): Promise
   const settings: AppSettings = { ...DEFAULT_SETTINGS, ...options.settings };
   if (!settings.evaluateComments) return { evaluated: false, duplicate: false, action: "none" };
   if (options.content.parentRemoved) return { evaluated: false, duplicate: false, action: "none" };
+  if (isGeneratedModMindComment(options.content)) return { evaluated: false, duplicate: false, action: "none" };
 
   const content: ContentItem = { ...options.content, kind: "comment" };
   const history = await getUserHistory(options.store, content.authorName);
@@ -15,4 +16,17 @@ export async function handleCommentSubmit(options: PostPipelineOptions): Promise
   }
 
   return handlePostSubmit({ ...options, content });
+}
+
+export function isGeneratedModMindComment(content: ContentItem): boolean {
+  const author = content.authorName.toLowerCase();
+  const text = `${content.title ?? ""}\n${content.body ?? ""}`.toLowerCase();
+  return (
+    author === "modmind-f4lcon46" ||
+    author === "modmind" ||
+    author.startsWith("modmind-") ||
+    text.includes("modmind moderation suggestion") ||
+    text.includes("modmind suggestion:") ||
+    text.includes("a human moderator should confirm this action")
+  );
 }

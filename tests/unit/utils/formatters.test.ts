@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDigestPost, formatConfidence, parseJsonSafe, truncateToTokenLimit } from "../../../src/utils/formatters.js";
+import { buildDigestPost, clampConfidence, formatConfidence, parseJsonSafe, truncateToTokenLimit } from "../../../src/utils/formatters.js";
 import { emptyWeeklyStats } from "../../../src/storage/evaluationLog.js";
 
 describe("formatters", () => {
@@ -17,6 +17,10 @@ describe("formatters", () => {
   it("builds quiet digest and formats confidence", () => {
     expect(buildDigestPost(emptyWeeklyStats(), { topInsight: "x", patternParagraph: "y", overrideWarnings: [], recommendations: [] })).toContain("Quiet week");
     expect(formatConfidence(87)).toBe("87%");
+    expect(formatConfidence(1)).toBe("100%");
+    expect(formatConfidence(0.87)).toBe("87%");
+    expect(clampConfidence(1)).toBe(100);
+    expect(clampConfidence(0.87)).toBe(87);
     expect(formatConfidence(Number.NaN)).toBe("-");
   });
 });

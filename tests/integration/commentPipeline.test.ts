@@ -45,6 +45,21 @@ describe("comment pipeline", () => {
     });
   });
 
+  it("skips ModMind-generated suggestion comments", async () => {
+    await expect(
+      handleCommentSubmit({
+        store,
+        content: {
+          ...comment,
+          id: "c_modmind",
+          authorName: "modmind-f4lcon46",
+          body: "ModMind moderation suggestion\n\nModMind suggestion: REMOVE"
+        },
+        rules: sampleRules
+      })
+    ).resolves.toMatchObject({ evaluated: false, action: "none" });
+  });
+
   it("evaluates old accounts with prior flags", async () => {
     await logAction(store, "commenter", "old", "remove");
     const result = await handleCommentSubmit({

@@ -38,7 +38,7 @@ export function truncateChars(text: string, maxChars: number): string {
 
 export function formatConfidence(confidence: number): string {
   if (!Number.isFinite(confidence)) return "-";
-  return `${Math.round(confidence)}%`;
+  return `${normalizeConfidenceScale(confidence)}%`;
 }
 
 export function calculateAccuracy(stats: Pick<WeeklyStats, "accepted" | "overridden">): number {
@@ -121,5 +121,11 @@ export function normalizeEvaluation(raw: Partial<EvaluationResult>): EvaluationR
 
 export function clampConfidence(confidence: number): number {
   if (!Number.isFinite(confidence)) return 0;
-  return Math.max(0, Math.min(100, Math.round(confidence)));
+  return Math.max(0, Math.min(100, normalizeConfidenceScale(confidence)));
+}
+
+export function normalizeConfidenceScale(confidence: number): number {
+  if (!Number.isFinite(confidence)) return 0;
+  const scaled = confidence > 0 && confidence <= 1 ? confidence * 100 : confidence;
+  return Math.round(scaled);
 }
