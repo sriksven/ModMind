@@ -31,16 +31,17 @@ function detectHallucinatedRules(
   const hallucinated: string[] = [];
 
   for (const cited of citedRules) {
-    const citedLower = cited.toLowerCase();
+    const citedStr = typeof cited === "string" ? cited : (cited as any).name ?? String(cited);
+    const citedLower = citedStr.toLowerCase();
     const matches = validNames.some(name =>
       name.includes(citedLower) ||
       citedLower.includes(name) ||
-      citedLower.split(/\s+/).some(word => validDescWords.has(word))
+      citedLower.split(/\s+/).some((word: string) => validDescWords.has(word))
     );
     if (matches) {
-      valid.push(cited);
+      valid.push(citedStr);
     } else {
-      hallucinated.push(cited);
+      hallucinated.push(citedStr);
     }
   }
 
