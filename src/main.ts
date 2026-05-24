@@ -3,6 +3,7 @@ import { OpenAIResponsesClient } from "./ai/client.js";
 import { runRuleGapDetectorJob } from "./jobs/ruleGapDetector.js";
 import { runRuleSyncJob } from "./jobs/ruleSync.js";
 import { runWeeklyDigestJob } from "./jobs/weeklyDigest.js";
+import { logModAction } from "./storage/evaluationLog.js";
 import { MemoryStore } from "./storage/redisAdapter.js";
 import { getRules } from "./storage/subredditRules.js";
 import { handleCommentSubmit } from "./triggers/onCommentSubmit.js";
@@ -191,6 +192,36 @@ devvit.addMenuItem?.({
     context.ui?.showToast?.(result.posted ? "ModMind rule gap analysis posted." : `Rule gap analysis skipped: ${result.reason ?? "not needed"}`);
   }
 });
+
+devvit.addMenuItem?.({
+  label: "ModMind: Override flag",
+  location: "post",
+  forUserType: "moderator",
+  onPress: handleOverrideFlagPress
+});
+
+export async function handleOverrideFlagPress(event: any, context: any): Promise<void> {
+  const postId = ensureThingId("t3_", event.targetId ?? event.post?.id ?? event.id);
+  const subredditName = await getRuntimeSubredditName(context);
+  const store = getRuntimeStore(context);
+  const modUsername = context.user?.username ?? context.user?.name ?? context.userId ?? "unknown";
+  const timestamp = Date.now();
+
+  await store.set(
+    `override:${postId}`,
+    JSON.stringify({
+      postId,
+      subredditName,
+      modUsername,
+      overriddenAt: timestamp,
+      action: "approved"
+    })
+  );
+  await logModAction(store, subredditName, postId, "overridden", modUsername, "approved", timestamp);
+  await context.reddit?.approve?.(postId);
+  context.ui?.showToast?.("ModMind flag overridden. Post approved.");
+  console.log("ModMind override logged", { postId, subredditName, modUsername });
+}
 
 export function adaptPostEvent(event: any): ContentItem {
   return {
