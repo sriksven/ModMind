@@ -1,0 +1,23 @@
+# Detailed local docs - keep public repo focused on status doc
+docs/
+
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Test coverage output
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

@@ -1,0 +1,40 @@
+{
+  "name": "modmind",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run tests/unit",
+    "test:watch": "vitest tests/unit",
+    "test:coverage": "vitest run tests/unit --coverage",
+    "test:integration": "vitest run tests/integration",
+    "lint": "eslint \"{src,tests,scripts}/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"{src,tests,scripts}/**/*.{ts,tsx}\" --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml}\"",
+    "type-check": "tsc --noEmit",
+    "docs:validate": "tsx scripts/validateDocs.ts"
+  },
+  "dependencies": {
+    "@devvit/public-api": "^0.12.24",
+    "zod": "^3.25.23"
+  },
+  "overrides": {
+    "protobufjs": "^8.4.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "@types/node": "^22.15.21",
+    "@vitest/coverage-v8": "^3.1.4",
+    "eslint": "^9.27.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.1",
+    "vitest": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

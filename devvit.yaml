@@ -1,0 +1,62 @@
+name: modmind-f4lcon46
+version: 0.1.0
+summary: AI-assisted moderation suggestions, digests, rule gap analysis, and multilingual support.
+description: ModMind evaluates incoming posts and comments against subreddit rules and surfaces actionable moderation suggestions.
+entry: src/main.ts
+permissions:
+  - read
+  - submit_post
+  - mod_posts
+  - mod_flair
+  - mod_config
+  - mod_mail
+settings:
+  - name: openaiApiKey
+    label: OpenAI API key
+    type: string
+    scope: installation
+  - name: aiModel
+    label: AI model
+    type: string
+    scope: installation
+    defaultValue: gpt-4.1-mini
+  - name: flagThreshold
+    label: Flag threshold
+    type: number
+    scope: installation
+    defaultValue: 75
+  - name: autoHoldThreshold
+    label: Auto-hold threshold
+    type: number
+    scope: installation
+    defaultValue: 92
+  - name: evaluateComments
+    label: Evaluate comments
+    type: boolean
+    scope: installation
+    defaultValue: true
+  - name: digestEnabled
+    label: Weekly digest enabled
+    type: boolean
+    scope: installation
+    defaultValue: true
+  - name: digestDay
+    label: Weekly digest day
+    type: string
+    scope: installation
+    defaultValue: monday
+  - name: digestHour
+    label: Weekly digest hour
+    type: number
+    scope: installation
+    defaultValue: 9
+  - name: ruleGapEnabled
+    label: Monthly rule gap detector enabled
+    type: boolean
+    scope: installation
+    defaultValue: true
+  - name: disabledLanguages
+    label: Disabled language codes
+    type: string
+    scope: installation
+    defaultValue: ""
