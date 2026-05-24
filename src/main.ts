@@ -334,8 +334,11 @@ async function submitModOnlyPostToReddit(context: any, subredditName: string, ti
 }
 
 async function getRuntimeSettings(context: any): Promise<AppSettings> {
-  const values = ((await context.settings?.getAll?.()?.catch(() => ({}))) ?? {}) as Partial<AppSettings> & { disabledLanguages?: string | string[] };
-  return {
+  const values = ((await context.settings?.getAll?.()?.catch((error: unknown) => {
+    console.error("ModMind runtime settings getAll failed", { error });
+    return {};
+  })) ?? {}) as Partial<AppSettings> & { disabledLanguages?: string | string[] };
+  const merged = {
     ...DEFAULT_SETTINGS,
     ...values,
     disabledLanguages:
@@ -343,6 +346,20 @@ async function getRuntimeSettings(context: any): Promise<AppSettings> {
         ? values.disabledLanguages.split(",").map((code: string) => code.trim()).filter(Boolean)
         : values.disabledLanguages ?? []
   };
+  console.log("ModMind runtime settings loaded", {
+    raw: values,
+    merged: {
+      aiModel: merged.aiModel,
+      flagThreshold: merged.flagThreshold,
+      autoHoldThreshold: merged.autoHoldThreshold,
+      evaluateComments: merged.evaluateComments,
+      digestEnabled: merged.digestEnabled,
+      ruleGapEnabled: merged.ruleGapEnabled,
+      disabledLanguages: merged.disabledLanguages,
+      hasOpenAIKey: Boolean(merged.openaiApiKey)
+    }
+  });
+  return merged;
 }
 
 function getRuntimeStore(context: any): KeyValueStore {
