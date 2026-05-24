@@ -39,6 +39,28 @@ export async function handlePostSubmit(options: PostPipelineOptions): Promise<Pi
     options.aiClient
   );
   const userHistory = await getUserHistory(options.store, options.content.authorName);
+
+  // Rate limiting: check if user has hit limit
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const recentEvaluations = (userHistory?.actions ?? []).filter(
+    action => Date.now() - action.timestamp < ONE_HOUR_MS
+  ).length;
+  const rateLimit = (options.settings as any)?.userRateLimitPerHour ?? 5;
+
+  if (recentEvaluations >= rateLimit) {
+    console.log("ModMind rate limit reached", {
+      authorName: options.content.authorName,
+      recentEvaluations,
+      limit: rateLimit
+    });
+    return {
+      evaluated: false,
+      duplicate: false,
+      action: "none",
+      result: undefined
+    };
+  }
+
   const result = await evaluateContent({
     content: options.content,
     rules: options.rules,

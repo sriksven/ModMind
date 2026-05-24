@@ -106,6 +106,8 @@ export interface WeeklyStats {
   overrideDetails: OverrideDetail[];
   languageBreakdown: Record<string, { evaluated: number; flagged: number; overridden: number }>;
   dailyVolume: Record<string, number>;
+  dailyAvgConfidence?: Record<string, number>;
+  modActionsByMod?: Record<string, { accepted: number; overridden: number; total: number }>;
 }
 
 export interface DigestSummary {

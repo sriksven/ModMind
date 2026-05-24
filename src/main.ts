@@ -4,6 +4,7 @@ import { runRuleGapDetectorJob } from "./jobs/ruleGapDetector.js";
 import { runRuleSyncJob } from "./jobs/ruleSync.js";
 import { runWeeklyDigestJob } from "./jobs/weeklyDigest.js";
 import { logModAction } from "./storage/evaluationLog.js";
+import { incrementMetric, recordCalibration } from "./storage/llmMetrics.js";
 import { MemoryStore } from "./storage/redisAdapter.js";
 import { getRules } from "./storage/subredditRules.js";
 import { handleCommentSubmit } from "./triggers/onCommentSubmit.js";
@@ -76,6 +77,20 @@ devvit.addSettings?.([
     label: "Disabled language codes",
     scope: SettingScope.Installation,
     defaultValue: ""
+  },
+  {
+    type: "number",
+    name: "userRateLimitPerHour",
+    label: "Max evaluations per user per hour",
+    scope: SettingScope.Installation,
+    defaultValue: 5
+  },
+  {
+    type: "boolean",
+    name: "digestAlertEnabled",
+    label: "Send mod mail alerts for activity spikes",
+    scope: SettingScope.Installation,
+    defaultValue: true
   }
 ]);
 
@@ -129,11 +144,15 @@ devvit.addSchedulerJob?.({
   onRun: async (_event: unknown, context: any) => {
     const settings = await getRuntimeSettings(context);
     const subredditName = await getRuntimeSubredditName(context);
+    const sendMessage = (to: string, subject: string, text: string) =>
+      context.reddit?.sendPrivateMessage?.({ to, subject, text });
     await runWeeklyDigestJob(
       getRuntimeStore(context),
       subredditName,
       (title, body) => submitModOnlyPostToReddit(context, subredditName, title, body),
-      buildAIClient(settings)
+      buildAIClient(settings),
+      sendMessage,
+      (settings as any)?.digestAlertEnabled ?? true
     );
   }
 });
@@ -161,11 +180,15 @@ devvit.addMenuItem?.({
   onPress: async (_event: unknown, context: any) => {
     const settings = await getRuntimeSettings(context);
     const subredditName = await getRuntimeSubredditName(context);
+    const sendMessage = (to: string, subject: string, text: string) =>
+      context.reddit?.sendPrivateMessage?.({ to, subject, text });
     const result = await runWeeklyDigestJob(
       getRuntimeStore(context),
       subredditName,
       (title, body) => submitModOnlyPostToReddit(context, subredditName, title, body),
       buildAIClient(settings),
+      sendMessage,
+      (settings as any)?.digestAlertEnabled ?? true,
       Date.now()
     );
     context.ui?.showToast?.(result.posted ? "ModMind digest posted." : `Digest skipped: ${result.reason ?? "not needed"}`);
@@ -218,6 +241,19 @@ export async function handleOverrideFlagPress(event: any, context: any): Promise
     })
   );
   await logModAction(store, subredditName, postId, "overridden", modUsername, "approved", timestamp);
+
+  // Record calibration: mod overrode = AI was wrong
+  try {
+    const { getEvaluationRecord } = await import("./storage/evaluationLog.js");
+    const evalRecord = await getEvaluationRecord(store, subredditName, postId);
+    if (evalRecord?.result?.confidence) {
+      const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) + 1;
+      await recordCalibration(store, subredditName, week, evalRecord.result.confidence, false);
+    }
+  } catch (err) {
+    console.error("ModMind failed to record calibration on override", { error: err });
+  }
+
   await context.reddit?.approve?.(postId);
   context.ui?.showToast?.("ModMind flag overridden. Post approved.");
   console.log("ModMind override logged", { postId, subredditName, modUsername });
@@ -283,6 +319,30 @@ async function runCommentPipeline(event: any, context: any): Promise<void> {
   }
   const store = getRuntimeStore(context);
   const rules = await getRules(store, content.subredditName, (name) => fetchSubredditRulesFromReddit(context, name));
+
+  // Check for mod explanation quality feedback
+  const isModerator = event.author?.isOp === false && event.isModeratorApproved;
+  const body = (content.body ?? "").trim();
+  if (isModerator && (body === "👍" || body === "👎" || body.toLowerCase() === "good" || body.toLowerCase() === "bad" || body === "+1" || body === "-1")) {
+    try {
+      const parentId = event.comment?.parentId ?? event.parentId;
+      const isReplyToModMind = parentId?.startsWith("t1_") && (await isModMindComment(store, parentId));
+      if (isReplyToModMind) {
+        const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) + 1;
+        if (body === "👍" || body.toLowerCase() === "good" || body === "+1") {
+          await incrementMetric(store, content.subredditName, week, "explanationThumbsUp", 1);
+          console.log("ModMind explanation rated helpful", { commentId: content.id });
+        } else {
+          await incrementMetric(store, content.subredditName, week, "explanationThumbsDown", 1);
+          console.log("ModMind explanation rated unhelpful", { commentId: content.id });
+        }
+        return; // Don't evaluate the mod's own reaction
+      }
+    } catch (error) {
+      console.error("ModMind failed to process mod explanation feedback", { error });
+    }
+  }
+
   const result = await handleCommentSubmit({ store, content, rules, aiClient: buildAIClient(settings), settings });
   console.log("ModMind comment pipeline completed", {
     commentId: content.id,
@@ -294,6 +354,15 @@ async function runCommentPipeline(event: any, context: any): Promise<void> {
     hasOpenAIKey: Boolean(settings.openaiApiKey)
   });
   await applyRuntimeAction(context, content, result);
+}
+
+async function isModMindComment(store: KeyValueStore, commentId: string): Promise<boolean> {
+  const val = await store.get(`modmind-comment:${commentId}`).catch(() => null);
+  return Boolean(val);
+}
+
+async function markModMindComment(store: KeyValueStore, commentId: string): Promise<void> {
+  await store.set(`modmind-comment:${commentId}`, "1", { ttlSeconds: 7 * 24 * 60 * 60 });
 }
 
 async function applyRuntimeAction(context: any, content: ContentItem, pipelineResult: PipelineResult): Promise<void> {
@@ -315,6 +384,10 @@ async function applyRuntimeAction(context: any, content: ContentItem, pipelineRe
     "A human moderator should confirm this action before relying on it outside playtest."
   ].join("\n");
 
+  const store = getRuntimeStore(context);
+  const subredditName = content.subredditName;
+  const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) + 1;
+
   try {
     if (pipelineResult.action === "hold") {
       await context.reddit?.remove?.(content.id, pipelineResult.result.violatedRules.some((rule: string) => /spam/iu.test(rule)));
@@ -324,16 +397,27 @@ async function applyRuntimeAction(context: any, content: ContentItem, pipelineRe
       const post = await context.reddit?.getPostById?.(content.id);
       const comment = await post?.addComment?.({ text: body, runAs: "APP" });
       await comment?.distinguish?.(false);
+      if (comment?.id) {
+        await markModMindComment(store, comment.id);
+      }
       console.log("ModMind posted suggestion comment", { postId: content.id });
+      
+      await incrementMetric(store, subredditName, week, "pipelineSuccess", 1);
       return;
     }
 
     const comment = await context.reddit?.getCommentById?.(content.id);
     const reply = await comment?.reply?.({ text: body, runAs: "APP" });
     await reply?.distinguish?.(false);
+    if (reply?.id) {
+      await markModMindComment(store, reply.id);
+    }
     console.log("ModMind posted suggestion reply", { commentId: content.id });
+    
+    await incrementMetric(store, subredditName, week, "pipelineSuccess", 1);
   } catch (error) {
     console.error("ModMind failed to apply runtime action", { contentId: content.id, error });
+    await incrementMetric(store, subredditName, week, "pipelinePartial", 1);
   }
 }
 
@@ -378,7 +462,6 @@ async function getRuntimeSettings(context: any): Promise<AppSettings> {
         : values.disabledLanguages ?? []
   };
   console.log("ModMind runtime settings loaded", {
-    raw: values,
     merged: {
       aiModel: merged.aiModel,
       flagThreshold: merged.flagThreshold,
@@ -387,7 +470,8 @@ async function getRuntimeSettings(context: any): Promise<AppSettings> {
       digestEnabled: merged.digestEnabled,
       ruleGapEnabled: merged.ruleGapEnabled,
       disabledLanguages: merged.disabledLanguages,
-      hasOpenAIKey: Boolean(merged.openaiApiKey)
+      hasOpenAIKey: Boolean(merged.openaiApiKey),
+      openaiApiKey: merged.openaiApiKey ? "sk-***" + merged.openaiApiKey.slice(-4) : "missing"
     }
   });
   return merged;

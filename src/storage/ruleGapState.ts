@@ -56,3 +56,33 @@ export async function updateRuleGapLastRun(store: KeyValueStore, subredditName: 
   await setJson(store, STORAGE_KEYS.ruleGapState(subredditName), next);
   return next;
 }
+
+export interface CalibrationNote {
+  ruleName: string;
+  overrideRate: number;
+  totalDecisions: number;
+  suggestion: string;
+  detectedAt: number;
+  dismissed: boolean;
+}
+
+export async function getCalibrationNotes(store: KeyValueStore, subredditName: string): Promise<CalibrationNote[]> {
+  try {
+    const raw = await store.get(`rulegap:${subredditName}:calibration`);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function storeCalibrationNotes(store: KeyValueStore, subredditName: string, notes: CalibrationNote[]): Promise<void> {
+  await store.set(`rulegap:${subredditName}:calibration`, JSON.stringify(notes), { ttlSeconds: 120 * 24 * 60 * 60 });
+}
+
+export async function dismissCalibrationNote(store: KeyValueStore, subredditName: string, ruleName: string): Promise<void> {
+  const notes = await getCalibrationNotes(store, subredditName);
+  const updated = notes.map(n => (n.ruleName === ruleName ? { ...n, dismissed: true } : n));
+  await storeCalibrationNotes(store, subredditName, updated);
+}
+

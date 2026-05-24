@@ -60,3 +60,13 @@ settings:
     type: string
     scope: installation
     defaultValue: ""
+  - name: userRateLimitPerHour
+    label: Max evaluations per user per hour
+    type: number
+    scope: installation
+    defaultValue: 5
+  - name: digestAlertEnabled
+    label: Send mod mail alerts for activity spikes
+    type: boolean
+    scope: installation
+    defaultValue: true

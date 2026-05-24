@@ -2,11 +2,40 @@ import type { ContentItem, LanguageDetectionResult, OverrideRecord, SubredditRul
 import { getLanguageDisplayName } from "./languageCodes.js";
 import { truncateToTokenLimit } from "./formatters.js";
 
+const INJECTION_PATTERNS = [
+  /ignore\s+(previous|all|above|prior)\s+(instructions?|rules?|prompts?|context)/gi,
+  /you\s+are\s+now\s+(a\s+)?(different|new|another|unrestricted)/gi,
+  /system\s*:\s*/gi,
+  /\[system\]/gi,
+  /jailbreak/gi,
+  /disregard\s+(all|any|previous)\s+(rules?|instructions?)/gi,
+  /pretend\s+(you\s+)?(are|have\s+no)\s+(restrictions?|rules?|guidelines?)/gi,
+  /act\s+as\s+(if\s+)?(you\s+)?(are|have)\s+no/gi,
+  /new\s+persona/gi,
+  /forget\s+(all\s+)?(previous|prior|your)\s+(instructions?|training)/gi,
+];
+
+export function sanitizeContent(text: string): string {
+  if (!text) return "";
+  let sanitized = text;
+  for (const pattern of INJECTION_PATTERNS) {
+    sanitized = sanitized.replace(pattern, "[content removed by safety filter]");
+  }
+  return sanitized;
+}
+
+export function wasInjectionAttempted(original: string, sanitized: string): boolean {
+  return original !== sanitized;
+}
+
 function formatRules(rules: SubredditRule[]): string {
   return rules.map((rule) => `${rule.id}. ${rule.name}: ${rule.description}`).join("\n");
 }
 
 export function buildEvaluationPrompt(content: ContentItem, rules: SubredditRule[], userHistory?: UserHistory): string {
+  const safeTitle = sanitizeContent(truncateToTokenLimit(content.title ?? "", 300));
+  const safeBody = sanitizeContent(truncateToTokenLimit(content.body ?? "", 900));
+  
   const historyBlock = userHistory
     ? `\nUser history:\n- prior flags: ${userHistory.flagCount}\n- recent actions: ${JSON.stringify(userHistory.actions.slice(-5))}\n`
     : "";
@@ -25,8 +54,8 @@ export function buildEvaluationPrompt(content: ContentItem, rules: SubredditRule
     historyBlock,
     "Content:",
     `Type: ${content.kind}`,
-    `Title: ${truncateToTokenLimit(content.title ?? "", 300)}`,
-    `Body: ${truncateToTokenLimit(content.body ?? "", 900)}`,
+    `Title: ${safeTitle}`,
+    `Body: ${safeBody}`,
     "",
     "Keep the reason plain-English and useful to a human moderator. Draft replies should be polite and concise."
   ].join("\n");
@@ -39,10 +68,13 @@ export function buildMultilingualEvaluationPrompt(
   userHistory?: UserHistory
 ): string {
   const languageName = getLanguageDisplayName(detectedLanguage.detected);
+  const safeTitle = sanitizeContent(truncateToTokenLimit(content.title ?? "", 300));
+  const safeBody = sanitizeContent(truncateToTokenLimit(content.body ?? "", 900));
+  
   return [
     `Evaluate this ${content.kind} written in ${languageName}.`,
     `The subreddit rules have been translated to ${languageName}. Respond in English.`,
-    buildEvaluationPrompt(content, translatedRules, userHistory),
+    buildEvaluationPrompt({ ...content, title: safeTitle, body: safeBody }, translatedRules, userHistory),
     "",
     "Also include bilingualReply with english and native fields. The native field must be written in the user's language."
   ].join("\n");

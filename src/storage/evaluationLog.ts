@@ -183,3 +183,14 @@ function applyModActionToStats(stats: WeeklyStats, result: EvaluationResult, mod
     });
   }
 }
+
+export async function getEvaluationRecord(
+  store: KeyValueStore,
+  subredditName: string,
+  postId: string,
+  week?: number
+): Promise<EvaluationRecord | undefined> {
+  const w = week ?? (await getCurrentWeek(store, subredditName));
+  const key = STORAGE_KEYS.evaluation(subredditName, w, postId);
+  return getJson<EvaluationRecord>(store, key);
+}
