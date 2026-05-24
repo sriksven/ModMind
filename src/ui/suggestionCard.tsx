@@ -18,7 +18,7 @@ export function renderSuggestionCard(result: EvaluationResult): string {
 
   if (result.draftReply) {
     lines.push("");
-    lines.push("Draft reply:");
+    lines.push("Suggested reply to send to user:");
     lines.push(result.draftReply);
   }
 
