@@ -14,6 +14,8 @@ describe("prompts", () => {
     expect(prompt).toContain("Return JSON only");
     expect(prompt).toContain("Default to approving");
     expect(prompt).toContain("If you are uncertain");
+    expect(prompt).toContain("integer from 0 to 100");
+    expect(prompt).toContain("Do not use decimals");
     expect(prompt).toContain("No spam");
     expect(prompt).toContain(spamPost.title);
     expect(prompt).toContain("prior flags: 5");

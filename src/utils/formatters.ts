@@ -126,6 +126,5 @@ export function clampConfidence(confidence: number): number {
 
 export function normalizeConfidenceScale(confidence: number): number {
   if (!Number.isFinite(confidence)) return 0;
-  const scaled = confidence > 0 && confidence <= 1 ? confidence * 100 : confidence;
-  return Math.round(scaled);
+  return Math.round(confidence);
 }

@@ -16,6 +16,7 @@ export function buildEvaluationPrompt(content: ContentItem, rules: SubredditRule
     "Evaluate the submitted content against the subreddit rules.",
     "IMPORTANT: Default to approving. Only flag content if it clearly and specifically violates one of the listed rules.",
     "If you are uncertain, return shouldFlag: false, confidence: 0, and suggestedAction: approve.",
+    "confidence must be an integer from 0 to 100. Do not use decimals or a 0-to-1 scale.",
     "Return JSON only with these fields: shouldFlag, confidence, suggestedAction, violatedRules, reason, draftReply.",
     "suggestedAction must be one of approve, remove, hold, escalate.",
     "",
